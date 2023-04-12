@@ -1,0 +1,89 @@
+---
+- name: Create users
+  user:
+    name: "{{ item }}"
+    password: ""
+    shell: /bin/bash
+  with_items:
+    - user1
+    - user2
+    - user3
+    - user4
+    - user5
+    - "{{ my_app }}_deploy"
+
+- name: Add admin group
+  group:
+    name: "{{ admin_group }}"
+    state: present
+
+- name: Add users to admin group
+  user:
+    name: "{{ item }}"
+    groups: "{{ admin_group }}"
+  with_items:
+    - user1
+    - user2
+    - user3
+    - user4
+    - user5
+    - "{{ my_app }}_deploy"
+
+- name: Configure visudo for admin group
+  lineinfile:
+    path: /etc/sudoers
+    regexp: "^%{{ admin_group }}\\s"
+    line: "%{{ admin_group }} ALL=(ALL) NOPASSWD: ALL"
+    validate: 'visudo -cf %s'
+
+- name: Create SSH directory and authorized_keys file for users
+  ansible.builtin.file:
+    path: /home/{{ item }}/.ssh
+    state: directory
+    mode: '0700'
+    owner: '{{ item }}'
+    group: '{{ item }}'
+  with_items:
+    - user1
+    - user2
+    - user3
+    - user4
+    - user5
+    - "{{ my_app }}_deploy"
+
+- name: Create authorized_keys file for users
+  ansible.builtin.file:
+    path: "/home/{{ item }}/.ssh/authorized_keys"
+    state: touch
+    owner: "{{ item }}"
+    group: "{{ item }}"
+  with_items:
+    - user1
+    - user2
+    - user3
+    - user4
+    - user5
+    - "{{ my_app }}_deploy"
+
+- name: Copy SSH keys to authorized_keys
+  ansible.builtin.copy:
+    src: "{{ 'templates/' + (item.endswith('_deploy') | ternary('deploy', item)) + '.pub' }}"
+    dest: "/home/{{ item }}/.ssh/authorized_keys"
+    owner: "{{ item }}"
+    mode: "0600"
+  with_items:
+    - user1
+    - user2
+    - user3
+    - user4
+    - user5
+    - "{{ my_app }}_deploy"
+  notify: restart ssh
+
+- name: Create dir project /var/www/{{ my_app }}
+  ansible.builtin.file:
+    path: /var/www/{{ my_app }}
+    state: directory
+    mode: '0755'
+    owner: "{{ my_app }}_deploy"
+    group: "{{ my_app }}_deploy"

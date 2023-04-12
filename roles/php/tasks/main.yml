@@ -1,0 +1,75 @@
+---
+- name: Add repo for php
+  ansible.builtin.apt_repository:
+    repo: ppa:ondrej/php
+    update_cache: true
+
+- name: Ensure apt-transport-https is installed
+  apt:
+    name:
+      - gnupg2
+      - apt-transport-https
+
+- name: Add Yarn and nodejs apt key
+  apt_key:
+    url: "{{ item }}"
+  with_items:
+    - "https://dl.yarnpkg.com/debian/pubkey.gpg"
+    - "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
+
+- name: Add Yarn and nodjs repository
+  apt_repository:
+    repo: "{{ item }}"
+  with_items:
+    - "deb https://dl.yarnpkg.com/debian/ stable main"
+    - "deb https://deb.nodesource.com/node_18.x focal main"
+
+- name: Install more package and all php libs
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: latest
+  with_items:
+    - "php{{ php_version }}-fpm"
+    - "php-mbstring"
+    - "php-xml"
+    - "php-gd"
+    - "php-curl"
+    - "php-json"
+    - "php-readline"
+    - "php-pgsql"
+    - "acl"
+    - "nodejs"
+    - "yarn"
+    - "supervisor"
+
+- name: Place php-fpm configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+  notify:
+    - Restart php-fpm
+  loop:
+    - src: php-fpm.conf.j2
+      dest: /etc/php/{{ php_version }}/fpm/php-fpm.conf
+    - src: www.conf.j2
+      dest: /etc/php/{{ php_version }}/fpm/www.conf
+  loop_control:
+    label: "{{ item.src }}"
+
+- name: Correct permission for logfile
+  ansible.builtin.file:
+    path: /var/log/php{{ php_version }}-fpm.log
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+    owner: www-data
+    group: www-data
+    mode: "0644"
+
+- name: Start php-fpm
+  ansible.builtin.service:
+    name: php{{ php_version }}-fpm.service
+    state: started
+    enabled: yes

@@ -1,0 +1,34 @@
+#################
+# LEPP PLAYBOOK #
+#################
+---
+#- hosts: dump_server
+#  become: true
+#  roles:
+#   - dump
+- hosts: devstage
+  become: true
+  pre_tasks:
+    - name: Install sysadmin packages
+      apt:
+        name:
+          - mc
+          - curl
+          - ncdu
+          - wget
+          - htop
+          - screen
+          - bash-completion
+          - unzip
+          - gzip
+          - vim
+          - netcat
+          - net-tools
+          - git
+          - tar
+        update_cache: yes
+  roles:
+    - nginx
+    - php
+    - postgres
+    - users

@@ -1,0 +1,13 @@
+---
+dumps: false
+#default: false. dumps local exist?
+
+#nginx
+my_app: <project name> #Using for nginx.conf and pg
+server_n: <header url> #.domain.ru Using for cloudflare and nginx conf
+
+#php
+php_version: 8.2
+
+#postgresql
+nuser_password: "<password db>"

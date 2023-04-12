@@ -1,0 +1,29 @@
+---
+- name: Check if dump file exists
+  stat:
+    path: /var/lib/postgres/all-databases-{{ my_app }}.sql
+  register: dump_file
+
+- name: Dump all databases
+  shell: pg_dumpall --clean --if-exists -U postgres > /var/lib/postgresql/all-databases-{{ my_app }}.sql
+  become_user: postgres
+  args:
+    chdir: /var/lib/postgresql
+  when: dump_file.stat.exists
+
+- name: Copy dump files to templates directory
+  fetch:
+    src: /var/lib/postgresql/all-databases-{{ my_app }}.sql
+    dest: /home/user/ansible/roles/postgres/templates/all-databases-{{ my_app }}.sql.j2
+    flat: yes
+
+  # if dump exist, dumps: true
+- name: Set dumps variable to true
+  local_action:
+    module: lineinfile
+    path: group_vars/all.yml
+    regexp: '^dumps:'
+    line: 'dumps: true'
+    insertafter: '---'
+  delegate_to: localhost
+  become_user: user
